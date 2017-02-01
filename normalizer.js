@@ -18,20 +18,37 @@ const clerkedArray = function (arr, schema, bag) {
       const element = target[property];
 
       if (property === 'length') return length;
+      if (property === 'object_type') return schema.key;
       if (property in target) return bag[schema.key][element.id];
       if (property in Array.prototype) return Array.prototype[property];
-    }
+    },
+    set: function(target, key, value) {
+      target[key] = visit(value, schema, bag); // eslint-disable-line no-use-before-define
+
+      return true;
+    },
   })
 };
 
 const clerkedObject = function (obj, schema, bag) {
   return new Proxy(obj, {
     get: function(target, key) {
-      const attr = target[key]
+      const attr = target[key];
 
       return ((key in schema.relations) && (!Array.isArray(attr))) ?
         bag[attr.object][attr.id] :
         attr;
+    },
+    set: function(target, key, value) {
+      if (key in schema.relations) {
+        const relationSchema = schema.relations[key];
+        target[key] = visit(value, relationSchema, bag); // eslint-disable-line no-use-before-define
+
+        return true;
+      }
+
+      target[key] = value;
+      return true;
     }
   })
 };
